@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayFlow</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f7f9fc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #0070ba;
+      color: white;
+    }
+    .balance-card {
+      background: linear-gradient(135deg, #0070ba, #1546a0);
+      color: white;
+      padding: 24px;
+      border-radius: 16px;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="auth-container">
+      <div class="card">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button class="btn btn-primary" id="login-register-btn">Login / Register</button>
+      </div>
+    </div>
+    <div id="home-container" style="display: none;">
+      <div class="balance-card">
+        <div>Balance: $<span id="balance">0.00</span></div>
+      </div>
+      <div class="card">
+        <input type="email" id="recipient-email" placeholder="Recipient Email">
+        <input type="number" id="amount" placeholder="Amount" min="0">
+        <button class="btn btn-primary" id="send-money-btn">Send Money</button>
+      </div>
+      <div class="card">
+        <h3>Transaction History</h3>
+        <div id="transactions-list"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function saveUserData(userData) {
+      localStorage.setItem('users', JSON.stringify(userData));
+    }
+    function getUserData() {
+      return JSON.parse(localStorage.getItem('users')) || {};
+    }
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    }
+    document.getElementById('login-register-btn').addEventListener('click', () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) return showNotification('Enter valid credentials');
+      let users = getUserData();
+      if (!users[email]) {
+        users[email] = { password, balance: 20, transactions: [] };
+        saveUserData(users);
+      } else if (users[email].password !== password) {
+        return showNotification('Incorrect password');
+      }
+      localStorage.setItem('loggedInUser', email);
+      document.getElementById('auth-container').style.display = 'none';
+      document.getElementById('home-container').style.display = 'block';
+      document.getElementById('balance').textContent = users[email].balance.toFixed(2);
+    });
+    document.getElementById('send-money-btn').addEventListener('click', () => {
+      const senderEmail = localStorage.getItem('loggedInUser');
+      const recipientEmail = document.getElementById('recipient-email').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      if (!senderEmail || !recipientEmail || isNaN(amount) || amount <= 0) {
+        return showNotification('Invalid transaction details');
+      }
+      let users = getUserData();
+      if (!users[recipientEmail]) {
+        return showNotification('Recipient not found');
+      }
+      if (users[senderEmail].balance < amount) {
+        return showNotification('Insufficient balance');
+      }
+      users[senderEmail].balance -= amount;
+      users[recipientEmail].balance += amount;
+      users[senderEmail].transactions.push(`Sent $${amount} to ${recipientEmail}`);
+      users[recipientEmail].transactions.push(`Received $${amount} from ${senderEmail}`);
+      saveUserData(users);
+      document.getElementById('balance').textContent = users[senderEmail].balance.toFixed(2);
+      showNotification('Money sent successfully');
+    });
+  </script>
+</body>
+</html>
